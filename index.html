@@ -13,35 +13,44 @@
       <img src="assets/yu-ming-readathon-2026-banner.png" alt="Yu Ming Readathon 2026 banner with a dragon reading a book">
     </section>
 
+    <nav class="dashboard-tabs" role="tablist" aria-label="Readathon information">
+      <button id="minutesTab" class="dashboard-tab" type="button" role="tab" aria-selected="true" aria-controls="dashboardView">Reading minutes</button>
+      <button id="pledgesTab" class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="dashboardView">Pledges</button>
+    </nav>
+
+    <div id="dashboardView" role="tabpanel" aria-labelledby="minutesTab">
     <section class="metrics" aria-label="Current reading metrics">
-      <article class="metric-card"><div class="metric-top"><span>Total reading minutes</span><span class="metric-icon mint">◷</span></div><strong id="totalMinutes">—</strong><small id="totalContext">Import a CSV to get started</small></article>
-      <article class="metric-card"><div class="metric-top"><span>Readers</span><span class="metric-icon peach">♧</span></div><strong id="readerCount">—</strong><small>Students in this view</small></article>
-      <article class="metric-card"><div class="metric-top"><span>Classes reading</span><span class="metric-icon lavender">▦</span></div><strong id="classCount">—</strong><small>Distinct classes in this view</small></article>
+      <article class="metric-card"><div class="metric-top"><span id="totalMetricLabel">Total reading minutes</span><span class="metric-icon mint">◷</span></div><strong id="totalMinutes">—</strong></article>
+      <article class="metric-card"><div class="metric-top"><span id="countMetricLabel">Readers</span><span class="metric-icon peach">♧</span></div><strong id="readerCount">—</strong></article>
+      <article class="metric-card"><div class="metric-top"><span id="classMetricLabel">Classes reading</span><span class="metric-icon lavender">▦</span></div><strong id="classCount">—</strong></article>
       <article class="metric-card accent-card"><div class="metric-top"><span>Last updated</span><span class="metric-icon white">✦</span></div><strong id="latestDate">—</strong></article>
     </section>
 
     <section class="content-grid">
       <article class="panel chart-panel">
-        <div class="section-heading"><div><p class="eyebrow">THE JOURNEY SO FAR</p><h2>Reading minutes over time</h2></div></div>
-        <div class="chart-subsection"><div class="chart-subtitle">Daily minutes <span>Added since the last update</span></div><div id="historyChart" class="history-chart"><div class="empty-state">Daily reading progress will appear here as the readathon begins.</div></div></div>
-        <div class="chart-subsection"><div class="chart-subtitle">Running total <span>Cumulative reading minutes</span></div><div id="cumulativeChart" class="history-chart compact-chart"><div class="empty-state">Your school’s reading total will grow here.</div></div></div>
+        <div class="section-heading"><div><p class="eyebrow">THE JOURNEY SO FAR</p><h2 id="chartTitle">Reading minutes over time</h2></div></div>
+        <div class="chart-subsection"><div class="chart-subtitle"><span id="dailyChartLabel" class="chart-label">Daily minutes</span><span id="dailyChartCaption">Added since the last update</span></div><div id="historyChart" class="history-chart"><div class="empty-state">Daily reading progress will appear here as the readathon begins.</div></div></div>
+        <div class="chart-subsection"><div class="chart-subtitle"><span id="runningChartLabel" class="chart-label">Running total</span><span id="runningChartCaption">Cumulative reading minutes</span></div><div id="cumulativeChart" class="history-chart compact-chart"><div class="empty-state">Your school’s reading total will grow here.</div></div></div>
       </article>
       <article class="panel filter-panel">
         <div class="section-heading"><div><p class="eyebrow">MAKE IT YOUR VIEW</p><h2>Explore readers</h2></div><span class="filter-symbol">⌕</span></div>
         <label>Campus<select id="campusFilter"><option value="">All campuses</option><option>MLK</option><option>Chestnut</option><option>Adeline</option><option>Carolyn</option></select></label>
-        <label>Grade<select id="gradeFilter"><option value="">All grades</option><option>TK</option><option>K</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
-        <label>Class<select id="classFilter"><option value="">All classes</option></select></label>
+        <label>Grade<select id="gradeFilter" disabled><option value="">All grades</option></select></label>
+        <label>Class<select id="classFilter" disabled><option value="">All classes</option></select></label>
         <button id="resetFilters" class="text-button">Reset filters</button>
       </article>
     </section>
 
     <section class="panel leaderboard-panel">
-      <div class="section-heading leaderboard-heading"><div><p class="eyebrow">CELEBRATING OUR READERS</p><h2>Top 10 readers</h2></div><span id="leaderboardLabel" class="scope-pill">Schoolwide</span></div>
-        <div class="table-wrap"><table><thead><tr><th>RANK</th><th>READER</th><th>CLASS</th><th>CAMPUS</th><th>GRADE</th><th class="right">TOTAL MINUTES</th><th class="right">NEW MINUTES</th></tr></thead><tbody id="leaderboardBody"><tr><td colspan="7" class="table-empty">Student leaders will appear here as reading gets underway.</td></tr></tbody></table></div>
+      <div class="section-heading leaderboard-heading"><div><p class="eyebrow">CELEBRATING OUR READERS</p><h2 id="leaderboardTitle">Top 10 readers</h2></div><span id="leaderboardLabel" class="scope-pill">Schoolwide</span></div>
+        <div class="table-wrap"><table><thead><tr><th>RANK</th><th>READER</th><th>CLASS</th><th>CAMPUS</th><th>GRADE</th><th id="totalMetricHeader" class="right">TOTAL MINUTES</th><th id="changeMetricHeader" class="right">NEW MINUTES</th></tr></thead><tbody id="leaderboardBody"><tr><td colspan="7" class="table-empty">Student leaders will appear here as reading gets underway.</td></tr></tbody></table></div>
     </section>
+    </div>
 
   </main>
   <footer><span>Small steps. Big stories.</span></footer>
   <script src="app.js"></script>
 </body>
 </html>
+
+
