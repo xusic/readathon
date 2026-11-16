@@ -93,6 +93,12 @@ export async function syncSanitizedData(projectRoot=root) {
       console.error(`Could not sanitize ${filename}: ${error.message}`);
     }
   }
+  const publicNames=(await readdir(outputDir)).filter(name=>datePattern.test(name)&&dateFromFilename(name)).sort();
+  const snapshots=await Promise.all(publicNames.map(async filename=>({
+    date:dateFromFilename(filename),filename,csv:await readFile(path.join(outputDir,filename),'utf8')
+  })));
+  await writeFile(path.join(outputDir,'snapshots.json'),JSON.stringify(snapshots,null,2)+'\n','utf8');
+  console.log(`Updated site-data/snapshots.json with ${snapshots.length} dated file(s).`);
   return updated;
 }
 
@@ -112,3 +118,4 @@ if(process.argv[1]&&path.resolve(process.argv[1])===modulePath) {
   const count=await syncSanitizedData();
   console.log(`Sanitization complete. ${count} dated file(s) updated.`);
 }
+

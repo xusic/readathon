@@ -174,12 +174,13 @@ $('classFilter').addEventListener('change',()=>{
 });
 $('resetFilters').addEventListener('click',()=>{['campusFilter','gradeFilter','classFilter'].forEach(id=>$(id).value='');render();});
 async function initialize(){
-  try { const response=await fetch('/api/snapshots'); if(!response.ok) throw new Error('Could not read the project data folder.'); const files=await response.json();
+  try { const response=await fetch('/site-data/snapshots.json'); if(!response.ok) throw new Error('Could not read sanitized website data.'); const files=await response.json();
     for(const item of files){try{snapshots[item.date]=parseImport(item.csv).records;}catch(error){console.warn(`Skipping ${item.filename}: ${error.message}`);}}
-  } catch(error) { console.error('Could not read the data folder:',error); }
+  } catch(error) { console.error('Could not read sanitized website data:',error); }
   render();
 }
 initialize();
+
 
 
 

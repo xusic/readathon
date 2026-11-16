@@ -8,7 +8,7 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(root, 'site-data');
 const rawDataDir = path.join(root, 'data');
 const port = Number(process.env.PORT || 4173);
-const mime = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.json':'application/json; charset=utf-8' };
+const mime = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.json':'application/json; charset=utf-8', '.json':'application/json; charset=utf-8' };
 await mkdir(rawDataDir, { recursive: true });
 await syncSanitizedData(root);
 const rawDataWatcher = watchRawData(root);
@@ -47,3 +47,4 @@ const server=http.createServer(async (req,res)=>{
 });
 server.listen(port,'127.0.0.1',()=>console.log(`Readathon site running at http://localhost:${port}`));
 process.on('SIGINT',()=>{rawDataWatcher.close();server.close(()=>process.exit(0));});
+
