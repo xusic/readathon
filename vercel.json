@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.yumingschool.com"
+        }
+      ],
+      "destination": "https://www.yumingschool.org",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/readathon",
+      "destination": "/index.html"
+    }
+  ],
+  "trailingSlash": false
+}
