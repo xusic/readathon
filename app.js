@@ -3,6 +3,7 @@ const $ = (id) => document.getElementById(id);
 
 let snapshots = {};
 let activeView = 'minutes';
+let enrollment = [];
 function parseCsv(text) {
   const rows = []; let row = [], cell = '', quoted = false;
   for (let i=0; i<text.length; i++) {
@@ -24,6 +25,14 @@ function parseClass(raw) {
   return { grade: match[1].toUpperCase(), className: match[2].trim(), campusCode, campus: CAMPUS_NAMES[campusCode] };
 }
 function normalizeHeader(value) { return String(value || '').replace(/^\uFEFF/, '').trim().toLowerCase(); }
+function parseEnrollment(text) {
+  const rows=parseCsv(text); if(rows.length<2)throw new Error('The enrollment CSV has no class rows.');
+  const headers=rows[0].map(normalizeHeader),col=name=>headers.indexOf(name);
+  const ix={campus:col('campus'),campusCode:col('campus code'),grade:col('grade'),className:col('class name'),students:col('total students')};
+  if(Object.values(ix).some(i=>i<0))throw new Error('Enrollment CSV needs Campus, Campus Code, Grade, Class Name, and Total Students columns.');
+  return rows.slice(1).map(cells=>({campus:String(cells[ix.campus]||'').trim(),campusCode:String(cells[ix.campusCode]||'').trim().toUpperCase(),grade:String(cells[ix.grade]||'').trim().toUpperCase(),className:String(cells[ix.className]||'').trim(),totalStudents:Number(String(cells[ix.students]||'').replace(/,/g,''))})).filter(r=>r.campus&&r.campusCode&&r.grade&&r.className&&Number.isFinite(r.totalStudents)&&r.totalStudents>0);
+}
+
 function prettyDate(iso, options={month:'short',day:'numeric'}) {
   if (!iso) return '—';
   const [y,m,d] = iso.split('-').map(Number);
@@ -63,36 +72,64 @@ function groupReaders(rows, sortField='minutes') {
   }
   return [...groups.values()].sort((a,b)=>b[sortField]-a[sortField] || a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
 }
-function readerKey(r) { return [r.firstName.toLowerCase(),r.lastName.toLowerCase(),r.className.toLowerCase(),r.campus].join('|'); }
+function readerKey(r) { return r.studentId ? `id:${r.studentId}` : [r.firstName.toLowerCase(),r.lastName.toLowerCase(),r.className.toLowerCase(),r.campus].join('|'); }
 function displayName(r) { const initial=String(r.lastName||'').trim().charAt(0); return `${r.firstName}${initial?` ${initial.toUpperCase()}.`:''}`; }
+function classKey(r) { return [r.campusCode,r.grade,String(r.className||'').toLowerCase()].join('|'); }
+function classLabel(r) { return `${r.campusCode} - ${r.grade} - ${r.className}`; }
 function drawChart() {
-  const campus=$('campusFilter').value, grade=$('gradeFilter').value, className=$('classFilter').value;
-  const matchesFilters=r=>(!campus||r.campus===campus)&&(!grade||r.grade===grade)&&(!className||r.className===className);
-  const entries = Object.entries(snapshots).sort(([a],[b])=>a.localeCompare(b));
-  if (!entries.length) return;
-  const metric=activeView==='pledges'?'pledges':'minutes';
-  const previous=new Map(), daily=[], cumulative=[];
-  for (const [date,allSnapshotRows] of entries) {
-    const rows=allSnapshotRows.filter(matchesFilters);
-    let change=0; const current=new Map();
-    for (const r of rows) {
-      const key=readerKey(r);
-      const delta=r[metric]-(previous.get(key) ?? 0); change+=delta; current.set(key,r[metric]);
-    }
-    daily.push([date,change]);
-    previous.clear(); for(const [key,value] of current) previous.set(key,value);
-    cumulative.push([date,rows.reduce((sum,r)=>sum+r[metric],0)]);
-  }
-  drawBars('historyChart',daily,metric==='pledges'?'new pledges':'new minutes');
-  drawBars('cumulativeChart',cumulative,metric==='pledges'?'total pledges':'cumulative minutes');
+  const rows=selectedRows();
+  if(activeView==='pledges') drawPledgeChart(rows);
+  else drawReadingCharts(rows);
 }
-function drawBars(elementId, entries, unit) {
-  const chart=$(elementId); const values=entries.map(([,v])=>v); const max=Math.max(...values.map(Math.abs),1);
-  chart.innerHTML=entries.map(([date,value],i)=>{
-    const label=value<0?`−${Math.abs(value).toLocaleString()}`:value.toLocaleString();
-    const height=Math.max(2,Math.abs(value)/max*(elementId==='historyChart'?118:84));
-    return `<div class="bar-group" title="${prettyDate(date,{month:'long',day:'numeric',year:'numeric'})}: ${label} ${unit}"><span class="bar-value">${label}</span><div class="bar ${i===entries.length-1?'latest':''} ${value<0?'negative':''}" style="height:${height}px"></div><span class="bar-label">${prettyDate(date)}</span></div>`;
+function selectedEnrollment() {
+  const campus=$('campusFilter').value, grade=$('gradeFilter').value, className=$('classFilter').value;
+  return enrollment.filter(r=>(!campus||r.campus===campus)&&(!grade||r.grade===grade)&&(!className||r.className===className));
+}
+function drawReadingCharts(rows) {
+  const classes=selectedEnrollment().map(r=>({...r,minutes:0,loggedStudents:0}));
+  const byClass=new Map(classes.map(r=>[classKey(r),r]));
+  for(const row of rows) {
+    const item=byClass.get(classKey(row));
+    if(!item)continue;
+    item.minutes+=row.minutes;
+    if(row.minutes>0)item.loggedStudents++;
+  }
+  const minutes=classes.map(r=>({...r,value:r.minutes}));
+  const participation=classes.map(r=>({...r,value:r.totalStudents?100*r.loggedStudents/r.totalStudents:0}));
+  drawClassChart('classMinutesChart',minutes,'minutes');
+  drawClassChart('participationChart',participation,'percent',80);
+}
+function drawPledgeChart(rows) {
+  const totals=new Map();
+  for(const row of rows) {
+    const key=classKey(row);
+    const item=totals.get(key)||{campus:row.campus,campusCode:row.campusCode,grade:row.grade,className:row.className,value:0};
+    item.value+=row.pledges; totals.set(key,item);
+  }
+  drawClassChart('pledgeClassChart',[...totals.values()],'pledges',80);
+}
+function drawClassChart(elementId,items,unit,goal=null) {
+  const chart=$(elementId);
+  const classes=[...items].sort((a,b)=>b.value-a.value||a.campusCode.localeCompare(b.campusCode)||gradeOrder(a.grade,b.grade)||a.className.localeCompare(b.className));
+  if(!classes.length){chart.innerHTML='<div class="empty-state">No class data is available for these filters.</div>';return;}
+  const slot=classes.length>24?70:82,left=48,right=18,top=20,plotHeight=220,bottom=88;
+  const width=left+right+slot*classes.length,height=top+plotHeight+bottom,plotWidth=slot*classes.length;
+  const largest=Math.max(...classes.map(r=>r.value),0);
+  // Leave a full label-height of headroom above the tallest bar. Without it,
+  // the value label is clamped to the chart top and can sit inside the bar.
+  const maxValue=unit==='percent'?110:goal===80?Math.max(100,Math.ceil(largest/20)*20)+20:Math.max(200,Math.ceil(largest*1.15/100)*100);
+  const step=maxValue<=120?20:Math.ceil(maxValue/5/50)*50;
+  const y=value=>top+plotHeight-(value/maxValue)*plotHeight,grid=[];
+  const tickLabel=value=>unit==='percent'?`${value}%`:value.toLocaleString();
+  for(let value=0;value<=maxValue;value+=step){const py=y(value);grid.push(`<line x1="${left}" y1="${py}" x2="${left+plotWidth}" y2="${py}" class="class-gridline"/><text x="${left-9}" y="${py+3}" text-anchor="end" class="class-axis-label">${tickLabel(value)}</text>`);}
+  const bars=classes.map((item,index)=>{
+    const cx=left+index*slot+slot/2,barWidth=Math.min(38,slot*.58),barHeight=item.value?Math.max(2,item.value/maxValue*plotHeight):0,barY=top+plotHeight-barHeight;
+    const labelY=top+plotHeight+23,detail=unit==='percent'?`${item.value.toFixed(1)}% (${item.loggedStudents} of ${item.totalStudents})`:item.value.toLocaleString(),title=`${classLabel(item)}: ${detail}${unit==='pledges'?' pledges':unit==='minutes'?' minutes':''}`;
+    return `<g><title>${escapeHtml(title)}</title><rect x="${cx-barWidth/2}" y="${barY}" width="${barWidth}" height="${barHeight}" rx="4" class="class-bar"/><text x="${cx}" y="${Math.max(top+10,barY-5)}" text-anchor="middle" class="class-value-label">${unit==='percent'?`${item.value.toFixed(0)}%`:item.value.toLocaleString()}</text><text x="${cx}" y="${labelY}" text-anchor="middle" class="class-name-label"><tspan x="${cx}" dy="0">${escapeHtml(item.campusCode)}</tspan><tspan x="${cx}" dy="15">${escapeHtml(item.grade)}</tspan><tspan x="${cx}" dy="15">${escapeHtml(item.className)}</tspan></text></g>`;
   }).join('');
+  const goalLine=goal===null?'':`<line x1="${left}" y1="${y(goal)}" x2="${left+plotWidth}" y2="${y(goal)}" class="class-goal-line"/><text x="${left+plotWidth-3}" y="${y(goal)-6}" text-anchor="end" class="class-goal-label">Goal ${goal}${unit==='percent'?'%':''}</text>`;
+  const description=unit==='percent'?'Student participation by class, with an 80 percent goal':unit==='pledges'?'Total pledges by class, with an 80 pledge goal':'Total reading minutes by class';
+  chart.innerHTML=`<svg class="class-chart" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${description}">${grid.join('')}${bars}${goalLine}</svg>`;
 }
 function render() {
   populateGradeFilter();
@@ -106,7 +143,7 @@ function render() {
   for(const r of students) r.delta=r[metric]-(previous.get(readerKey(r)) ?? 0);
   const total=rows.reduce((sum,r)=>sum+r[metric],0);
   const pledgers=students.filter(r=>r.pledges>0);
-  const classes=pledgesView?new Set(pledgers.map(r=>`${r.campus}|${r.className}`)).size:new Set(rows.map(r=>r.className)).size;
+  const classes=pledgesView?new Set(pledgers.map(classKey)).size:new Set(rows.map(classKey)).size;
   $('totalMetricLabel').textContent=pledgesView?'Total pledges':'Total reading minutes';
   $('countMetricLabel').textContent=pledgesView?'Pledgers':'Readers';
   $('classMetricLabel').textContent=pledgesView?'Classes with pledges':'Classes reading';
@@ -114,11 +151,10 @@ function render() {
   $('readerCount').textContent=(pledgesView?pledgers.length:students.length).toLocaleString();
   $('classCount').textContent=classes.toLocaleString();
   $('latestDate').textContent=date ? prettyDate(date,{month:'short',day:'numeric',year:'numeric'}) : '—';
-  $('chartTitle').textContent=pledgesView?'Pledges over time':'Reading minutes over time';
-  $('dailyChartLabel').textContent=pledgesView?'Daily pledges':'Daily minutes';
-  $('dailyChartCaption').textContent='Added since the last update';
-  $('runningChartLabel').textContent=pledgesView?'Running total':'Running total';
-  $('runningChartCaption').textContent=pledgesView?'Cumulative pledges':'Cumulative reading minutes';
+  $('chartTitle').textContent=pledgesView?'Pledges by class':'Reading minutes by class';
+  $('minutesCharts').hidden=pledgesView;
+  $('pledgeCharts').hidden=!pledgesView;
+  $('contentGrid').classList.toggle('pledges-view',pledgesView);
   $('leaderboardTitle').textContent=pledgesView?'Top 10 pledgers':'Top 10 readers';
   $('totalMetricHeader').textContent=pledgesView?'TOTAL PLEDGES':'TOTAL MINUTES';
   $('changeMetricHeader').textContent=pledgesView?'NEW PLEDGES':'NEW MINUTES';
@@ -131,7 +167,7 @@ function parseImport(text) {
   const rows=parseCsv(text); if(rows.length<2) throw new Error('The CSV does not contain any student rows.');
   const headers=rows[0].map(normalizeHeader);
   const col=(name)=>headers.indexOf(name);
-  const ix={last:col('last name'),first:col('first name'),className:col('class name'),minutes:col('minute count'),online:col('online donation #'),offline:col('offline donation #')};
+  const ix={studentId:col('student id'),last:col('last name'),first:col('first name'),className:col('class name'),minutes:col('minute count'),online:col('online donation #'),offline:col('offline donation #')};
   if([ix.last,ix.first,ix.className,ix.minutes].some(i=>i<0)) throw new Error('Could not find the required columns: Last Name, First Name, Class Name, and Minute Count.');
   const byStudent=new Map(); let skipped=0;
   for(const cells of rows.slice(1)) {
@@ -142,8 +178,9 @@ function parseImport(text) {
     const countAt=index=>{if(index<0)return 0;const value=Number(String(cells[index]||'0').replace(/,/g,''));return Number.isFinite(value)&&value>0?value:0;};
     const pledges=countAt(ix.online)+countAt(ix.offline);
     if(!first || !last || !parsed || !Number.isFinite(amount) || amount<0) {skipped++; continue;}
-    const key=[first.toLowerCase(),last.toLowerCase(),parsed.className.toLowerCase(),parsed.campus].join('|');
-    const item=byStudent.get(key)||{firstName:first,lastName:last,...parsed,minutes:0,pledges:0}; item.minutes+=amount; item.pledges+=pledges; byStudent.set(key,item);
+    const id=ix.studentId>=0?String(cells[ix.studentId]||'').trim():'';
+    const key=id?`id:${id}`:[first.toLowerCase(),last.toLowerCase(),parsed.className.toLowerCase(),parsed.campus].join('|');
+    const item=byStudent.get(key)||{studentId:id,firstName:first,lastName:last,...parsed,minutes:0,pledges:0}; item.minutes+=amount; item.pledges+=pledges; byStudent.set(key,item);
   }
   if(!byStudent.size) throw new Error('No valid student rows found. Check that class names end with MLK, CHE, ADE, or CAR.');
   return {records:[...byStudent.values()],skipped};
@@ -177,9 +214,12 @@ async function initialize(){
   try { const response=await fetch('/site-data/snapshots.json'); if(!response.ok) throw new Error('Could not read sanitized website data.'); const files=await response.json();
     for(const item of files){try{snapshots[item.date]=parseImport(item.csv).records;}catch(error){console.warn(`Skipping ${item.filename}: ${error.message}`);}}
   } catch(error) { console.error('Could not read sanitized website data:',error); }
+  try { const response=await fetch('/site-data/enrollment.csv'); if(!response.ok) throw new Error('Could not read class enrollment totals.'); enrollment=parseEnrollment(await response.text()); }
+  catch(error) { console.error('Could not read class enrollment totals:',error); }
   render();
 }
 initialize();
+
 
 
 

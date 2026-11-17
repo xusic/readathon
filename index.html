@@ -26,11 +26,17 @@
       <article class="metric-card accent-card"><div class="metric-top"><span>Last updated</span><span class="metric-icon white">✦</span></div><strong id="latestDate">—</strong></article>
     </section>
 
-    <section class="content-grid">
+    <section id="contentGrid" class="content-grid">
       <article class="panel chart-panel">
-        <div class="section-heading"><div><p class="eyebrow">THE JOURNEY SO FAR</p><h2 id="chartTitle">Reading minutes over time</h2></div></div>
-        <div class="chart-subsection"><div class="chart-subtitle"><span id="dailyChartLabel" class="chart-label">Daily minutes</span><span id="dailyChartCaption">Added since the last update</span></div><div id="historyChart" class="history-chart"><div class="empty-state">Daily reading progress will appear here as the readathon begins.</div></div></div>
-        <div class="chart-subsection"><div class="chart-subtitle"><span id="runningChartLabel" class="chart-label">Running total</span><span id="runningChartCaption">Cumulative reading minutes</span></div><div id="cumulativeChart" class="history-chart compact-chart"><div class="empty-state">Your school’s reading total will grow here.</div></div></div>
+        <div class="section-heading"><div><p class="eyebrow">THE JOURNEY SO FAR</p><h2 id="chartTitle">Reading minutes by class</h2></div></div>
+        <div id="minutesCharts">
+          <div class="chart-subsection"><div class="chart-subtitle"><span>Total reading minutes by class</span><span>Latest cumulative totals</span></div><div id="classMinutesChart" class="class-chart-scroller"><div class="empty-state">Class reading totals will appear here.</div></div></div>
+          <div class="chart-subsection"><div class="chart-subtitle"><span>Students who have logged minutes</span><span>Goal: 80% of enrolled students</span></div><div id="participationChart" class="class-chart-scroller"><div class="empty-state">Class participation will appear here.</div></div></div>
+        </div>
+        <div id="pledgeCharts" hidden>
+          <div class="chart-subtitle pledge-chart-heading"><span>Total pledges per class</span><span>Goal: 80 per class · Scroll to see all classes</span></div>
+          <div id="pledgeClassChart" class="class-chart-scroller"><div class="empty-state">Class pledge totals will appear here.</div></div>
+        </div>
       </article>
       <article class="panel filter-panel">
         <div class="section-heading"><div><p class="eyebrow">MAKE IT YOUR VIEW</p><h2>Explore readers</h2></div><span class="filter-symbol">⌕</span></div>

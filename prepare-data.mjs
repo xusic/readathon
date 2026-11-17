@@ -2,11 +2,12 @@ import { watch } from 'node:fs';
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHmac, randomBytes } from 'node:crypto';
 
 const modulePath = fileURLToPath(import.meta.url);
 const root = path.dirname(modulePath);
 const datePattern = /^(\d{4})[_-](\d{2})[_-](\d{2})\.csv$/i;
-const outputHeaders = ['Last Name', 'First Name', 'Class Name', 'Minute Count', 'Online Donation #', 'Offline Donation #'];
+const outputHeaders = ['Student ID', 'Last Name', 'First Name', 'Class Name', 'Minute Count', 'Online Donation #', 'Offline Donation #'];
 
 function parseCsv(text) {
   const rows=[]; let row=[], cell='', quoted=false;
@@ -45,8 +46,12 @@ function nonnegativeCount(value, filename, columnName) {
   if(!Number.isInteger(count)||count<0)throw new Error(`${filename}: ${columnName} must contain a nonnegative whole number.`);
   return String(count);
 }
+function studentId(first, last, className, secret) {
+  const identity = [first, last, className].map(value => value.trim().toLowerCase()).join('|');
+  return createHmac('sha256', secret).update(identity).digest('hex').slice(0, 16);
+}
 
-async function sanitizeFile(sourceDir, outputDir, filename) {
+async function sanitizeFile(sourceDir, outputDir, filename, idSecret) {
   const source=await readFile(path.join(sourceDir,filename),'utf8');
   const rows=parseCsv(source);
   if(rows.length<2)throw new Error(`${filename}: no data rows found.`);
@@ -65,7 +70,7 @@ async function sanitizeFile(sourceDir, outputDir, filename) {
     const minutes=Number(minutesText);
     if(!Number.isFinite(minutes)||minutes<0)continue;
     safeRows.push([
-      [...last][0].toUpperCase(), first, className, String(minutes),
+      studentId(first, last, className, idSecret), [...last][0].toUpperCase(), first, className, String(minutes),
       ix.online<0?'0':nonnegativeCount(cells[ix.online],filename,'Online Donation #'),
       ix.offline<0?'0':nonnegativeCount(cells[ix.offline],filename,'Offline Donation #'),
     ]);
@@ -81,12 +86,21 @@ export async function syncSanitizedData(projectRoot=root) {
   const outputDir=path.join(projectRoot,'site-data');
   await mkdir(sourceDir,{recursive:true});
   await mkdir(outputDir,{recursive:true});
+  const secretPath=path.join(sourceDir,'.student-id-key');
+  let idSecret;
+  try { idSecret=await readFile(secretPath); }
+  catch(error) {
+    if(error.code!=='ENOENT')throw error;
+    idSecret=randomBytes(32);
+    try { await writeFile(secretPath,idSecret,{flag:'wx'}); }
+    catch(writeError) { if(writeError.code!=='EEXIST')throw writeError; idSecret=await readFile(secretPath); }
+  }
   const filenames=(await readdir(sourceDir)).filter(name=>datePattern.test(name)).sort();
   let updated=0;
   for(const filename of filenames) {
     if(!dateFromFilename(filename)){console.warn(`Skipping invalid dated CSV filename: ${filename}`);continue;}
     try {
-      const count=await sanitizeFile(sourceDir,outputDir,filename);
+      const count=await sanitizeFile(sourceDir,outputDir,filename,idSecret);
       console.log(`Sanitized ${filename}: ${count} student rows -> site-data/${filename}`);
       updated++;
     } catch(error) {
