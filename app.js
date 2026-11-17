@@ -185,7 +185,6 @@ function render() {
   $('chartTitle').textContent=pledgesView?'Pledges by class':'Reading minutes by class';
   $('minutesCharts').hidden=pledgesView;
   $('pledgeCharts').hidden=!pledgesView;
-  $('contentGrid').classList.toggle('pledges-view',pledgesView);
   $('leaderboardTitle').textContent=pledgesView?'Top 10 pledgers':'Top 10 readers';
   $('totalMetricHeader').textContent=pledgesView?'TOTAL PLEDGES':'TOTAL MINUTES';
   $('changeMetricHeader').textContent=pledgesView?'NEW PLEDGES':'NEW MINUTES';

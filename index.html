@@ -19,6 +19,14 @@
     </nav>
 
     <div id="dashboardView" role="tabpanel" aria-labelledby="minutesTab">
+    <article class="panel filter-panel">
+      <div class="section-heading"><div><h2>Explore readers</h2></div><span class="filter-symbol">⌕</span></div>
+      <label>Campus<select id="campusFilter"><option value="">All campuses</option><option>MLK</option><option>Chestnut</option><option>Adeline</option><option>Carolyn</option></select></label>
+      <label>Grade<select id="gradeFilter" disabled><option value="">All grades</option></select></label>
+      <label>Class<select id="classFilter" disabled><option value="">All classes</option></select></label>
+      <button id="resetFilters" class="text-button">Reset filters</button>
+    </article>
+
     <section class="metrics" aria-label="Current reading metrics">
       <article class="metric-card"><div class="metric-top"><span id="totalMetricLabel">Total reading minutes</span><span class="metric-icon mint">◷</span></div><strong id="totalMinutes">—</strong></article>
       <article class="metric-card"><div class="metric-top"><span id="countMetricLabel">Readers</span><span class="metric-icon peach">♧</span></div><strong id="readerCount">—</strong></article>
@@ -36,13 +44,6 @@
           <div class="chart-subtitle pledge-chart-heading"><span>Total pledges per class</span><span>Goal: 80 per class<span id="pledgeScrollHint" hidden> · Scroll to see all classes</span></span></div>
           <div id="pledgeClassChart" class="class-chart-scroller"><div class="empty-state">Class pledge totals will appear here.</div></div>
         </div>
-      </article>
-      <article class="panel filter-panel">
-        <div class="section-heading"><div><h2>Explore readers</h2></div><span class="filter-symbol">⌕</span></div>
-        <label>Campus<select id="campusFilter"><option value="">All campuses</option><option>MLK</option><option>Chestnut</option><option>Adeline</option><option>Carolyn</option></select></label>
-        <label>Grade<select id="gradeFilter" disabled><option value="">All grades</option></select></label>
-        <label>Class<select id="classFilter" disabled><option value="">All classes</option></select></label>
-        <button id="resetFilters" class="text-button">Reset filters</button>
       </article>
     </section>
 
