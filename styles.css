@@ -9,6 +9,7 @@ body{color:var(--ink);background:var(--paper)}.topbar{border-bottom-color:#eee5d
 .hero-banner{margin:25px 0 24px}.hero-banner img{display:block;width:100%;height:auto}footer{justify-content:center}
 
 .filter-panel select:disabled{opacity:.55;cursor:not-allowed}
+.chart-subtitle .chart-subtitle-title{font-size:17px;font-weight:700;letter-spacing:-.4px;color:#58202a}
 
 .dashboard-tabs{display:flex;gap:5px;width:max-content;max-width:100%;margin:0 0 17px;padding:4px;background:#f2e8e2;border:1px solid #eee1d8;border-radius:10px}.dashboard-tab{border:0;border-radius:7px;padding:10px 18px;background:transparent;color:#775d5a;font:600 12px 'DM Sans',sans-serif;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s}.dashboard-tab[aria-selected="true"]{background:#a42632;color:#fff;box-shadow:0 2px 7px #62202825}.dashboard-tab:focus-visible{outline:2px solid #d68a2c;outline-offset:2px}@media(max-width:390px){.dashboard-tab{padding:9px 13px}}
 
