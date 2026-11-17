@@ -1,5 +1,6 @@
 const CAMPUS_NAMES = { MLK: 'MLK', CHE: 'Chestnut', ADE: 'Adeline', CAR: 'Carolyn' };
 const $ = (id) => document.getElementById(id);
+const FILTER_STORAGE_KEY = 'yu-ming-readathon-filters-v1';
 
 let snapshots = {};
 let activeView = 'minutes';
@@ -61,6 +62,30 @@ function populateClassFilter() {
   select.innerHTML='<option value="">All classes</option>'+vals.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   select.value=vals.includes(old)?old:'';
 }
+function readSavedFilters() {
+  try { return JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || 'null'); }
+  catch { return null; }
+}
+function saveFilters() {
+  try {
+    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify({
+      campus:$('campusFilter').value,
+      grade:$('gradeFilter').value,
+      className:$('classFilter').value,
+    }));
+  } catch (error) { console.warn('Could not save filter preferences in this browser:', error); }
+}
+function restoreFilters() {
+  const saved=readSavedFilters();
+  if(!saved||typeof saved!=='object')return;
+  const campus=$('campusFilter'),grade=$('gradeFilter'),classSelect=$('classFilter');
+  if([...campus.options].some(option=>option.value===saved.campus))campus.value=saved.campus;
+  populateGradeFilter();
+  if([...grade.options].some(option=>option.value===saved.grade))grade.value=saved.grade;
+  populateClassFilter();
+  if([...classSelect.options].some(option=>option.value===saved.className))classSelect.value=saved.className;
+  saveFilters();
+}
 function groupReaders(rows, sortField='minutes') {
   const groups = new Map();
   for (const r of rows) {
@@ -108,10 +133,15 @@ function drawPledgeChart(rows) {
   }
   drawClassChart('pledgeClassChart',[...totals.values()],'pledges',80);
 }
+function updatePledgeScrollHint() {
+  const chart=$('pledgeClassChart'),hint=$('pledgeScrollHint');
+  if(!chart||!hint)return;
+  hint.hidden=!chart.querySelector('.class-chart')||chart.scrollWidth<=chart.clientWidth+1;
+}
 function drawClassChart(elementId,items,unit,goal=null) {
   const chart=$(elementId);
   const classes=[...items].sort((a,b)=>b.value-a.value||a.campusCode.localeCompare(b.campusCode)||gradeOrder(a.grade,b.grade)||a.className.localeCompare(b.className));
-  if(!classes.length){chart.innerHTML='<div class="empty-state">No class data is available for these filters.</div>';return;}
+  if(!classes.length){chart.innerHTML='<div class="empty-state">No class data is available for these filters.</div>';if(elementId==='pledgeClassChart')updatePledgeScrollHint();return;}
   const slot=classes.length>24?70:82,left=48,right=18,top=20,plotHeight=220,bottom=88;
   const width=left+right+slot*classes.length,height=top+plotHeight+bottom,plotWidth=slot*classes.length;
   const largest=Math.max(...classes.map(r=>r.value),0);
@@ -130,6 +160,7 @@ function drawClassChart(elementId,items,unit,goal=null) {
   const goalLine=goal===null?'':`<line x1="${left}" y1="${y(goal)}" x2="${left+plotWidth}" y2="${y(goal)}" class="class-goal-line"/><text x="${left+plotWidth-3}" y="${y(goal)-6}" text-anchor="end" class="class-goal-label">Goal ${goal}${unit==='percent'?'%':''}</text>`;
   const description=unit==='percent'?'Student participation by class, with an 80 percent goal':unit==='pledges'?'Total pledges by class, with an 80 pledge goal':'Total reading minutes by class';
   chart.innerHTML=`<svg class="class-chart" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${description}">${grid.join('')}${bars}${goalLine}</svg>`;
+  if(elementId==='pledgeClassChart')requestAnimationFrame(updatePledgeScrollHint);
 }
 function render() {
   populateGradeFilter();
@@ -201,21 +232,23 @@ $('pledgesTab').addEventListener('click',()=>{
   document.title='Yu Ming Readathon 2026 | Pledges';
   render();
 });
-$('campusFilter').addEventListener('change',render);
-$('gradeFilter').addEventListener('change',()=>{$('classFilter').value='';render();});
+$('campusFilter').addEventListener('change',()=>{render();saveFilters();});
+$('gradeFilter').addEventListener('change',()=>{$('classFilter').value='';render();saveFilters();});
 $('classFilter').addEventListener('change',()=>{
   const selected=$('classFilter').value, campus=$('campusFilter').value;
   const row=latestRows().find(r=>r.campus===campus&&r.className===selected);
   if(row) $('gradeFilter').value=row.grade;
-  render();
+  render();saveFilters();
 });
-$('resetFilters').addEventListener('click',()=>{['campusFilter','gradeFilter','classFilter'].forEach(id=>$(id).value='');render();});
+$('resetFilters').addEventListener('click',()=>{['campusFilter','gradeFilter','classFilter'].forEach(id=>$(id).value='');render();try{localStorage.removeItem(FILTER_STORAGE_KEY);}catch(error){console.warn('Could not clear saved filters in this browser:',error);}});
+window.addEventListener('resize',()=>requestAnimationFrame(updatePledgeScrollHint));
 async function initialize(){
   try { const response=await fetch('/site-data/snapshots.json'); if(!response.ok) throw new Error('Could not read sanitized website data.'); const files=await response.json();
     for(const item of files){try{snapshots[item.date]=parseImport(item.csv).records;}catch(error){console.warn(`Skipping ${item.filename}: ${error.message}`);}}
   } catch(error) { console.error('Could not read sanitized website data:',error); }
   try { const response=await fetch('/site-data/enrollment.csv'); if(!response.ok) throw new Error('Could not read class enrollment totals.'); enrollment=parseEnrollment(await response.text()); }
   catch(error) { console.error('Could not read class enrollment totals:',error); }
+  restoreFilters();
   render();
 }
 initialize();
