@@ -19,7 +19,8 @@ function parseCsv(text) {
   return rows;
 }
 function parseClass(raw) {
-  const value = String(raw || '').trim();
+  // Some exports append the enrolled student count, for example "5ElephantMLK (25)".
+  const value = String(raw || '').trim().replace(/\s*\(\d+\)\s*$/, '');
   const match = value.match(/^(TK|K|[1-8])(.+?)(MLK|CHE|ADE|CAR)$/i);
   if (!match) return null;
   const campusCode = match[3].toUpperCase();
