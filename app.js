@@ -5,6 +5,7 @@ const FILTER_STORAGE_KEY = 'yu-ming-readathon-filters-v1';
 let snapshots = {};
 let activeView = 'minutes';
 let enrollment = [];
+let goals = { participationGoalPercent: 100, minutesGoal: 400000, dollarsGoal: 55000, dollarsRaised: null };
 function parseCsv(text) {
   const rows = []; let row = [], cell = '', quoted = false;
   for (let i=0; i<text.length; i++) {
@@ -163,7 +164,34 @@ function drawClassChart(elementId,items,unit,goal=null) {
   chart.innerHTML=`<svg class="class-chart" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${description}">${grid.join('')}${bars}${goalLine}</svg>`;
   if(elementId==='pledgeClassChart')requestAnimationFrame(updatePledgeScrollHint);
 }
+function setGoal(prefix, current, goal, valueText, detailText) {
+  const percent=goal>0&&Number.isFinite(current)?Math.max(0,current/goal*100):0;
+  $(`${prefix}Value`).textContent=valueText;
+  $(`${prefix}Detail`).textContent=detailText;
+  $(`${prefix}Bar`).style.width=`${Math.min(100,percent)}%`;
+  const bar=$(`${prefix}Bar`).parentElement;
+  bar.setAttribute('aria-valuenow',String(Math.round(Math.min(100,percent))));
+  bar.classList.toggle('complete',percent>=100);
+}
+function renderGoals() {
+  // School-wide goals always use the latest snapshot and ignore the filters.
+  const rows=latestRows();
+  const minutes=rows.reduce((sum,r)=>sum+r.minutes,0);
+  const readers=new Set(rows.filter(r=>r.minutes>0).map(readerKey)).size;
+  const enrolled=enrollment.reduce((sum,r)=>sum+r.totalStudents,0);
+  const pctOf=(value,goal)=>goal>0?`${Math.round(value/goal*100)}% of goal`:'';
+  const {participationGoalPercent:pGoal,minutesGoal:mGoal,dollarsGoal:dGoal,dollarsRaised:raised}=goals;
+  $('participationGoal').textContent=`${pGoal}%`;
+  $('minutesGoal').textContent=mGoal.toLocaleString();
+  $('dollarsGoal').textContent=`$${dGoal.toLocaleString()}`;
+  const participation=enrolled?readers/enrolled*100:0;
+  setGoal('participation',participation,pGoal,enrolled?`${participation.toFixed(1)}%`:'—',enrolled?`${readers.toLocaleString()} of ${enrolled.toLocaleString()} students reading`:'Enrollment totals unavailable');
+  setGoal('minutes',minutes,mGoal,minutes.toLocaleString(),pctOf(minutes,mGoal));
+  const hasRaised=typeof raised==='number'&&Number.isFinite(raised);
+  setGoal('dollars',hasRaised?raised:0,dGoal,hasRaised?`$${raised.toLocaleString(undefined,{maximumFractionDigits:0})}`:'—',hasRaised?pctOf(raised,dGoal):'Total coming soon');
+}
 function render() {
+  renderGoals();
   populateGradeFilter();
   populateClassFilter();
   const date=currentDate(), rows=selectedRows(), pledgesView=activeView==='pledges';
@@ -173,15 +201,6 @@ function render() {
   const dates=Object.keys(snapshots).sort();
   const previous=dates.length>1 ? new Map(groupReaders(snapshots[dates.at(-2)],metric).map(r=>[readerKey(r),r[metric]])) : new Map();
   for(const r of students) r.delta=r[metric]-(previous.get(readerKey(r)) ?? 0);
-  const total=rows.reduce((sum,r)=>sum+r[metric],0);
-  const pledgers=students.filter(r=>r.pledges>0);
-  const classes=pledgesView?new Set(pledgers.map(classKey)).size:new Set(rows.map(classKey)).size;
-  $('totalMetricLabel').textContent=pledgesView?'Total pledges':'Total reading minutes';
-  $('countMetricLabel').textContent=pledgesView?'Pledgers':'Readers';
-  $('classMetricLabel').textContent=pledgesView?'Classes with pledges':'Classes reading';
-  $('totalMinutes').textContent=total.toLocaleString();
-  $('readerCount').textContent=(pledgesView?pledgers.length:students.length).toLocaleString();
-  $('classCount').textContent=classes.toLocaleString();
   $('latestDate').textContent=date ? prettyDate(date,{month:'short',day:'numeric',year:'numeric'}) : '—';
   $('chartTitle').textContent=pledgesView?'Pledges by class':'Reading minutes by class';
   $('minutesCharts').hidden=pledgesView;
@@ -248,6 +267,8 @@ async function initialize(){
   } catch(error) { console.error('Could not read sanitized website data:',error); }
   try { const response=await fetch('/site-data/enrollment.csv'); if(!response.ok) throw new Error('Could not read class enrollment totals.'); enrollment=parseEnrollment(await response.text()); }
   catch(error) { console.error('Could not read class enrollment totals:',error); }
+  try { const response=await fetch('/site-data/goals.json'); if(!response.ok) throw new Error('Could not read goals.'); goals={...goals,...await response.json()}; }
+  catch(error) { console.error('Could not read school-wide goals:',error); }
   restoreFilters();
   render();
 }

@@ -11,6 +11,28 @@
   <main class="page-shell">
     <section class="hero-banner" aria-label="Yu Ming Readathon banner">
       <img src="assets/yu-ming-readathon-2026-banner.png" alt="Yu Ming Readathon 2026 banner with a dragon reading a book">
+      <a class="hero-cta" href="https://yuming.pledgestar.com/FamilySignIn/" target="_blank" rel="noopener noreferrer">Open PledgeStar <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens PledgeStar sign-in in a new tab)</span></a>
+    </section>
+
+    <section class="goal-tracker" aria-label="School-wide readathon goals">
+      <article class="goal-card">
+        <div class="goal-top"><span class="goal-label">Participation</span><span class="goal-target">Goal: <b id="participationGoal">100%</b></span></div>
+        <strong id="participationValue" class="goal-value">—</strong>
+        <div class="goal-bar" role="progressbar" aria-label="Participation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="participationBar"></span></div>
+        <small id="participationDetail" class="goal-detail">&nbsp;</small>
+      </article>
+      <article class="goal-card">
+        <div class="goal-top"><span class="goal-label">Minutes read</span><span class="goal-target">Goal: <b id="minutesGoal">400,000</b></span></div>
+        <strong id="minutesValue" class="goal-value">—</strong>
+        <div class="goal-bar" role="progressbar" aria-label="Minutes read progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="minutesBar"></span></div>
+        <small id="minutesDetail" class="goal-detail">&nbsp;</small>
+      </article>
+      <article class="goal-card">
+        <div class="goal-top"><span class="goal-label">Dollars raised</span><span class="goal-target">Goal: <b id="dollarsGoal">$55,000</b></span></div>
+        <strong id="dollarsValue" class="goal-value">—</strong>
+        <div class="goal-bar" role="progressbar" aria-label="Dollars raised progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="dollarsBar"></span></div>
+        <small id="dollarsDetail" class="goal-detail">&nbsp;</small>
+      </article>
     </section>
 
     <nav class="dashboard-tabs" role="tablist" aria-label="Readathon information">
@@ -26,12 +48,6 @@
       <label>Class<select id="classFilter" disabled><option value="">All classes</option></select></label>
       <button id="resetFilters" class="text-button">Reset filters</button>
     </article>
-
-    <section class="metrics" aria-label="Current reading metrics">
-      <article class="metric-card"><div class="metric-top"><span id="totalMetricLabel">Total reading minutes</span><span class="metric-icon mint">◷</span></div><strong id="totalMinutes">—</strong></article>
-      <article class="metric-card"><div class="metric-top"><span id="countMetricLabel">Readers</span><span class="metric-icon peach">♧</span></div><strong id="readerCount">—</strong></article>
-      <article class="metric-card"><div class="metric-top"><span id="classMetricLabel">Classes reading</span><span class="metric-icon lavender">▦</span></div><strong id="classCount">—</strong></article>
-    </section>
 
     <section id="contentGrid" class="content-grid">
       <article class="panel chart-panel">
